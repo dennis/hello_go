@@ -37,8 +37,8 @@ func (a *App) populateData() {
 	a.Context.MessageRepository.Insert(models.Message{ID: "1", Author: "Dennis", Topic: "Hello World", Body: "Lorem lipsum"})
 	a.Context.MessageRepository.Insert(models.Message{ID: "2", Author: "Marianne", Topic: "re: Hello World", Body: "Really?"})
 
-	a.Context.Users = append(a.Context.Users, models.User{Username: "Dennis", AuthToken: "authtokendennis"})
-	a.Context.Users = append(a.Context.Users, models.User{Username: "Marianne", AuthToken: "authtokenmarianne"})
+	a.Context.UserRepository.Insert(models.User{Username: "Dennis", AuthToken: "authtokendennis"})
+	a.Context.UserRepository.Insert(models.User{Username: "Marianne", AuthToken: "authtokenmarianne"})
 }
 
 func (a *App) Run() {

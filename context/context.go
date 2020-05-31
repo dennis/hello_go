@@ -6,7 +6,7 @@ import (
 )
 
 type Context struct {
-	Users             []models.User
 	CurrentUser       models.User
 	MessageRepository repositories.MessageRepository
+	UserRepository    repositories.UserRepository
 }

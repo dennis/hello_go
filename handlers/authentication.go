@@ -10,16 +10,6 @@ import (
 	"github.com/dennis/hello_go/models"
 )
 
-func findUser(ctx *context.Context, token string) *models.User {
-	for _, user := range ctx.Users {
-		if user.AuthToken == token {
-			return &user
-		}
-	}
-
-	return nil
-}
-
 func Authenticate(ctx *context.Context, r *http.Request) *models.User {
 	const basicScheme string = "Basic "
 
@@ -46,5 +36,5 @@ func Authenticate(ctx *context.Context, r *http.Request) *models.User {
 
 	username := string(username_password[0])
 
-	return findUser(ctx, username)
+	return ctx.UserRepository.FindByToken(username)
 }
