@@ -34,8 +34,8 @@ func (a *App) setupRoutes() {
 func (a *App) populateData() {
 	a.Context = context.Context{}
 
-	a.Context.Messages = append(a.Context.Messages, models.Message{ID: "1", Topic: "Hello World", Body: "Lorem lipsum"})
-	a.Context.Messages = append(a.Context.Messages, models.Message{ID: "2", Topic: "re: Hello World", Body: "Really?"})
+	a.Context.Messages = append(a.Context.Messages, models.Message{ID: "1", Author: "Dennis", Topic: "Hello World", Body: "Lorem lipsum"})
+	a.Context.Messages = append(a.Context.Messages, models.Message{ID: "2", Author: "Marianne", Topic: "re: Hello World", Body: "Really?"})
 
 	a.Context.Users = append(a.Context.Users, models.User{Username: "Dennis", AuthToken: "authtokendennis"})
 	a.Context.Users = append(a.Context.Users, models.User{Username: "Marianne", AuthToken: "authtokenmarianne"})
@@ -48,6 +48,8 @@ func (a *App) Run() {
 func (a *App) handleRequest(handler func(ctx *context.Context, w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if user := handlers.Authenticate(&a.Context, r); user != nil {
+			a.Context.CurrentUser = *user
+
 			handler(&a.Context, w, r)
 		} else {
 			w.WriteHeader(http.StatusUnauthorized)

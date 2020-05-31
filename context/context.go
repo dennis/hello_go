@@ -5,6 +5,7 @@ import (
 )
 
 type Context struct {
-	Messages []models.Message
-	Users    []models.User
+	Messages    []models.Message
+	Users       []models.User
+	CurrentUser models.User
 }
