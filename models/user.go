@@ -1,6 +1,6 @@
 package models
 
 type User struct {
-	Username	string
-	AuthToken	string
+	Username  string
+	AuthToken string
 }

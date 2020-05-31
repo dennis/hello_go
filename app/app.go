@@ -6,13 +6,13 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/dennis/hello_go/handlers"
 	"github.com/dennis/hello_go/context"
+	"github.com/dennis/hello_go/handlers"
 	"github.com/dennis/hello_go/models"
 )
 
 type App struct {
-	Router *mux.Router
+	Router  *mux.Router
 	Context context.Context
 }
 
@@ -32,7 +32,7 @@ func (a *App) setupRoutes() {
 }
 
 func (a *App) populateData() {
-	a.Context = context.Context {}
+	a.Context = context.Context{}
 
 	a.Context.Messages = append(a.Context.Messages, models.Message{ID: "1", Topic: "Hello World", Body: "Lorem lipsum"})
 	a.Context.Messages = append(a.Context.Messages, models.Message{ID: "2", Topic: "re: Hello World", Body: "Really?"})

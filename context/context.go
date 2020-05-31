@@ -6,5 +6,5 @@ import (
 
 type Context struct {
 	Messages []models.Message
-	Users []models.User
+	Users    []models.User
 }

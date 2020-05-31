@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 
 	"github.com/dennis/hello_go/context"
 	"github.com/dennis/hello_go/models"
@@ -79,4 +79,3 @@ func DeleteMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request)
 
 	w.WriteHeader(http.StatusNotFound)
 }
-
