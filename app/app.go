@@ -17,6 +17,11 @@ type App struct {
 }
 
 func (a *App) Initialize() {
+	a.setupRoutes()
+	a.populateData()
+}
+
+func (a *App) setupRoutes() {
 	a.Router = mux.NewRouter()
 
 	a.Router.HandleFunc("/api/messages", a.handleRequest(handlers.GetMessages)).Methods("GET")
@@ -24,10 +29,16 @@ func (a *App) Initialize() {
 	a.Router.HandleFunc("/api/messages", a.handleRequest(handlers.CreateMessage)).Methods("POST")
 	a.Router.HandleFunc("/api/messages/{id}", a.handleRequest(handlers.UpdateMessage)).Methods("PUT")
 	a.Router.HandleFunc("/api/messages/{id}", a.handleRequest(handlers.DeleteMessage)).Methods("DELETE")
+}
 
+func (a *App) populateData() {
 	a.Context = context.Context {}
+
 	a.Context.Messages = append(a.Context.Messages, models.Message{ID: "1", Topic: "Hello World", Body: "Lorem lipsum"})
 	a.Context.Messages = append(a.Context.Messages, models.Message{ID: "2", Topic: "re: Hello World", Body: "Really?"})
+
+	a.Context.Users = append(a.Context.Users, models.User{Username: "Dennis", AuthToken: "authtokendennis"})
+	a.Context.Users = append(a.Context.Users, models.User{Username: "Marianne", AuthToken: "authtokenmarianne"})
 }
 
 func (a *App) Run() {
@@ -35,8 +46,11 @@ func (a *App) Run() {
 }
 
 func (a *App) handleRequest(handler func(ctx *context.Context, w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
-	// TODO: Authentication/Authorization
 	return func(w http.ResponseWriter, r *http.Request) {
-		handler(&a.Context, w, r)
+		if user := handlers.Authenticate(&a.Context, r); user != nil {
+			handler(&a.Context, w, r)
+		} else {
+			w.WriteHeader(http.StatusUnauthorized)
+		}
 	}
 }
