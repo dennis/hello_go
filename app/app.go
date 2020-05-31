@@ -3,6 +3,7 @@ package app
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -45,8 +46,26 @@ func (a *App) Run() {
 	log.Fatal(http.ListenAndServe(":8080", a.Router))
 }
 
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func newLoggingresponseWriter(w http.ResponseWriter) *loggingResponseWriter {
+	return &loggingResponseWriter{w, http.StatusOK}
+}
+
+func (l *loggingResponseWriter) WriteHeader(code int) {
+	l.statusCode = code
+	l.ResponseWriter.WriteHeader(code)
+}
+
 func (a *App) handleRequest(handler func(ctx *context.Context, w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(original_w http.ResponseWriter, r *http.Request) {
+		w := newLoggingresponseWriter(original_w)
+
+		start := time.Now()
+
 		if user := handlers.Authenticate(&a.Context, r); user != nil {
 			a.Context.CurrentUser = *user
 
@@ -54,5 +73,13 @@ func (a *App) handleRequest(handler func(ctx *context.Context, w http.ResponseWr
 		} else {
 			w.WriteHeader(http.StatusUnauthorized)
 		}
+
+		log.Printf(
+			"%3d %-10s%-6s\t%s\t%s",
+			w.statusCode,
+			a.Context.CurrentUser.Username,
+			r.Method,
+			r.RequestURI,
+			time.Since(start))
 	}
 }
