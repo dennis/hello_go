@@ -34,8 +34,8 @@ func (a *App) setupRoutes() {
 func (a *App) populateData() {
 	a.Context = context.Context{}
 
-	a.Context.Messages = append(a.Context.Messages, models.Message{ID: "1", Author: "Dennis", Topic: "Hello World", Body: "Lorem lipsum"})
-	a.Context.Messages = append(a.Context.Messages, models.Message{ID: "2", Author: "Marianne", Topic: "re: Hello World", Body: "Really?"})
+	a.Context.MessageRepository.Insert(models.Message{ID: "1", Author: "Dennis", Topic: "Hello World", Body: "Lorem lipsum"})
+	a.Context.MessageRepository.Insert(models.Message{ID: "2", Author: "Marianne", Topic: "re: Hello World", Body: "Really?"})
 
 	a.Context.Users = append(a.Context.Users, models.User{Username: "Dennis", AuthToken: "authtokendennis"})
 	a.Context.Users = append(a.Context.Users, models.User{Username: "Marianne", AuthToken: "authtokenmarianne"})

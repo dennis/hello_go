@@ -12,21 +12,20 @@ import (
 func GetMessages(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	json.NewEncoder(w).Encode(ctx.Messages)
+	messages := ctx.MessageRepository.GetAll()
+
+	json.NewEncoder(w).Encode(messages)
 }
 
 func GetMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	for _, message := range ctx.Messages {
-		if message.ID == params["id"] {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(message)
-			return
-		}
+	if message := ctx.MessageRepository.FindByID(params["id"]); message != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(message)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
 	}
-
-	w.WriteHeader(http.StatusNotFound)
 }
 
 func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
@@ -37,7 +36,7 @@ func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request)
 	if err := json.NewDecoder(r.Body).Decode(&message); err == nil {
 		message.Author = ctx.CurrentUser.Username
 
-		ctx.Messages = append(ctx.Messages, message)
+		ctx.MessageRepository.Insert(message)
 
 		json.NewEncoder(w).Encode(message)
 	} else {
@@ -48,46 +47,43 @@ func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request)
 func UpdateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	for index, message := range ctx.Messages {
-		if message.ID == params["id"] {
-			if message.Author == ctx.CurrentUser.Username {
-				// Remove the old message
-				ctx.Messages = append(ctx.Messages[:index], ctx.Messages[index+1:]...)
+	id := params["id"]
 
-				// Add new
-				var message models.Message
-				_ = json.NewDecoder(r.Body).Decode(&message)
+	if message := ctx.MessageRepository.FindByID(id); message != nil {
+		if message.Author == ctx.CurrentUser.Username {
+			ctx.MessageRepository.DeleteByID(id)
 
-				message.Author = ctx.CurrentUser.Username
+			var message models.Message
+			_ = json.NewDecoder(r.Body).Decode(&message)
 
-				ctx.Messages = append(ctx.Messages, message)
+			message.Author = ctx.CurrentUser.Username
 
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(message)
-			} else {
-				w.WriteHeader(http.StatusUnauthorized)
-			}
+			ctx.MessageRepository.Update(message)
 
-			return
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(message)
+		} else {
+			w.WriteHeader(http.StatusUnauthorized)
 		}
-	}
 
-	w.WriteHeader(http.StatusNotFound)
+		return
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+	}
 }
 
 func DeleteMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	for index, message := range ctx.Messages {
-		if message.ID == params["id"] {
-			if message.Author == ctx.CurrentUser.Username {
-				ctx.Messages = append(ctx.Messages[:index], ctx.Messages[index+1:]...)
-			} else {
-				w.WriteHeader(http.StatusUnauthorized)
-			}
-			return
-		}
-	}
+	id := params["id"]
 
-	w.WriteHeader(http.StatusNotFound)
+	if message := ctx.MessageRepository.FindByID(id); message != nil {
+		if message.Author == ctx.CurrentUser.Username {
+			ctx.MessageRepository.DeleteByID(id)
+		} else {
+			w.WriteHeader(http.StatusUnauthorized)
+		}
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+	}
 }
