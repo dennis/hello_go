@@ -6,10 +6,9 @@ import (
 
 	"github.com/dennis/hello_go/context"
 	"github.com/dennis/hello_go/models"
-	"github.com/gorilla/mux"
 )
 
-func GetMessages(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
+func GetMessages(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
 	w.Header().Set("Content-Type", "application/json")
 
 	messages := ctx.MessageRepository.GetAll()
@@ -17,10 +16,8 @@ func GetMessages(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(messages)
 }
 
-func GetMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-
-	if message := ctx.MessageRepository.FindByID(params["id"]); message != nil {
+func GetMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
+	if message := ctx.MessageRepository.FindByID(vars["id"]); message != nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(message)
 	} else {
@@ -28,7 +25,7 @@ func GetMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
+func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var message models.Message
@@ -44,10 +41,8 @@ func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func UpdateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-
-	id := params["id"]
+func UpdateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
+	id := vars["id"]
 
 	if message := ctx.MessageRepository.FindByID(id); message != nil {
 		if message.Author == ctx.CurrentUser.Username {
@@ -72,10 +67,8 @@ func UpdateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func DeleteMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-
-	id := params["id"]
+func DeleteMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
+	id := vars["id"]
 
 	if message := ctx.MessageRepository.FindByID(id); message != nil {
 		if message.Author == ctx.CurrentUser.Username {

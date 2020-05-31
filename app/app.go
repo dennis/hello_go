@@ -51,7 +51,7 @@ type loggingResponseWriter struct {
 	statusCode int
 }
 
-func newLoggingresponseWriter(w http.ResponseWriter) *loggingResponseWriter {
+func newLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
 	return &loggingResponseWriter{w, http.StatusOK}
 }
 
@@ -60,16 +60,21 @@ func (l *loggingResponseWriter) WriteHeader(code int) {
 	l.ResponseWriter.WriteHeader(code)
 }
 
-func (a *App) handleRequest(handler func(ctx *context.Context, w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
+func (a *App) handleRequest(handler func(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string)) http.HandlerFunc {
 	return func(original_w http.ResponseWriter, r *http.Request) {
-		w := newLoggingresponseWriter(original_w)
+		// We need to wrap our ResponseWriter to capture the http status code
+		w := newLoggingResponseWriter(original_w)
+
+		// To avoid that mux leaks into the handlers, we capture any
+		// variables it as, and provide them as a plain map[string]string
+		vars := mux.Vars(r)
 
 		start := time.Now()
 
 		if user := handlers.Authenticate(&a.Context, r); user != nil {
 			a.Context.CurrentUser = *user
 
-			handler(&a.Context, w, r)
+			handler(&a.Context, w, r, vars)
 		} else {
 			w.WriteHeader(http.StatusUnauthorized)
 		}
