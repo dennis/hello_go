@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -27,6 +28,20 @@ func setupContext() *context.Context {
 	ctx.MessageRepository.Insert(message2)
 
 	return &ctx
+}
+
+func setupRequestWithContent(content io.Reader) (*http.Request, *httptest.ResponseRecorder) {
+	// Any information provided via the URL is handled in App. IDs
+	// and similar stuff is provided via the vars argument to the handler.
+	// So our handler should care about the URL or Verb
+	r := httptest.NewRequest("GET", "/this/doesnt/matter", content)
+	w := httptest.NewRecorder()
+
+	return r, w
+}
+
+func setupRequest() (*http.Request, *httptest.ResponseRecorder) {
+	return setupRequestWithContent(nil)
 }
 
 func assertStatusCode(t *testing.T, resp *http.Response, expected int) {
@@ -68,17 +83,23 @@ func assertMessageJSON(t *testing.T, resp *http.Response) *models.Message {
 	}
 
 	return &message
-
 }
 
-func TestMessages(t *testing.T) {
+func assertMessage(t *testing.T, message *models.Message, expectedAuthor, expectedTopic, expectedBody, expectedID string) {
+	assertEqual(t, message.Author, expectedAuthor, "Author is correct")
+	assertEqual(t, message.Topic, expectedTopic, "Topic is correct")
+	assertEqual(t, message.Body, expectedBody, "Body is correct")
+	assertEqual(t, message.ID, expectedID, "Id is correct")
+}
+
+var noVars = map[string]string{}
+
+func TestGetMessages(t *testing.T) {
 	ctx := setupContext()
 
-	r := httptest.NewRequest("GET", "/api/messages", nil)
-	w := httptest.NewRecorder()
-	vars := map[string]string{}
+	r, w := setupRequest()
 
-	handlers.GetMessages(ctx, w, r, vars)
+	handlers.GetMessages(ctx, w, r, noVars)
 
 	resp := w.Result()
 
@@ -109,13 +130,11 @@ func TestMessages(t *testing.T) {
 func TestGetMessage_WhenMessageExists(t *testing.T) {
 	ctx := setupContext()
 
-	r := httptest.NewRequest("GET", "/api/messages/1", nil)
-	w := httptest.NewRecorder()
-	vars := map[string]string{
-		"id": "1",
-	}
+	r, w := setupRequest()
 
-	handlers.GetMessage(ctx, w, r, vars)
+	handlers.GetMessage(ctx, w, r, map[string]string{
+		"id": "1",
+	})
 
 	resp := w.Result()
 
@@ -132,37 +151,23 @@ func TestGetMessage_WhenMessageExists(t *testing.T) {
 func TestGetMessage_WhenMessageDoesNotExists(t *testing.T) {
 	ctx := setupContext()
 
-	r := httptest.NewRequest("GET", "/api/messages/28", nil)
-	w := httptest.NewRecorder()
-	vars := map[string]string{
-		"id": "28",
-	}
+	r, w := setupRequest()
 
-	handlers.GetMessage(ctx, w, r, vars)
+	handlers.GetMessage(ctx, w, r, map[string]string{
+		"id": "28",
+	})
 
 	resp := w.Result()
 
 	assertStatusCode(t, resp, 404)
 }
 
-func assertMessage(t *testing.T, message *models.Message, expectedAuthor, expectedTopic, expectedBody, expectedID string) {
-	assertEqual(t, message.Author, expectedAuthor, "Author is correct")
-	assertEqual(t, message.Topic, expectedTopic, "Topic is correct")
-	assertEqual(t, message.Body, expectedBody, "Body is correct")
-	assertEqual(t, message.ID, expectedID, "Id is correct")
-}
-
 func TestCreateMessage_WithValidJson(t *testing.T) {
 	ctx := setupContext()
-	body := strings.NewReader("{\"id\":\"42\",\"author\":\"phony\", \"topic\":\"topic\", \"body\":\"body\"}")
 
-	r := httptest.NewRequest("POST", "/api/messages", body)
-	w := httptest.NewRecorder()
-	vars := map[string]string{
-		"id": "28",
-	}
+	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"42\",\"author\":\"phony\", \"topic\":\"topic\", \"body\":\"body\"}"))
 
-	handlers.CreateMessage(ctx, w, r, vars)
+	handlers.CreateMessage(ctx, w, r, noVars)
 
 	resp := w.Result()
 
@@ -171,23 +176,26 @@ func TestCreateMessage_WithValidJson(t *testing.T) {
 
 	// check response
 	message := assertMessageJSON(t, resp)
-	assertMessage(t, message, ctx.CurrentUser.Username, "topic", "body", "42")
 
-	// Check repository
-	storedMessage := ctx.MessageRepository.FindByID("42")
-	assertMessage(t, storedMessage, ctx.CurrentUser.Username, "topic", "body", "42")
+	if message != nil {
+		assertMessage(t, message, ctx.CurrentUser.Username, "topic", "body", "42")
+
+		// Check repository
+		storedMessage := ctx.MessageRepository.FindByID("42")
+		if storedMessage != nil {
+			assertMessage(t, storedMessage, ctx.CurrentUser.Username, "topic", "body", "42")
+		} else {
+			t.Error("Message not found in repository")
+		}
+	}
 }
 
 func TestCreateMessage_WithInvalidJson(t *testing.T) {
 	ctx := setupContext()
 
-	r := httptest.NewRequest("POST", "/api/messages", strings.NewReader(""))
-	w := httptest.NewRecorder()
-	vars := map[string]string{
-		"id": "28",
-	}
+	r, w := setupRequestWithContent(strings.NewReader(""))
 
-	handlers.CreateMessage(ctx, w, r, vars)
+	handlers.CreateMessage(ctx, w, r, noVars)
 
 	resp := w.Result()
 
@@ -198,15 +206,11 @@ func TestCreateMessage_WithInvalidJson(t *testing.T) {
 func TestUpdateMessage_OwnerUpdatesMessage(t *testing.T) {
 	ctx := setupContext()
 
-	body := strings.NewReader("{\"id\":\"1\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}")
+	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"1\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}"))
 
-	r := httptest.NewRequest("PUT", "/api/messages/1", body)
-	w := httptest.NewRecorder()
-	vars := map[string]string{
+	handlers.UpdateMessage(ctx, w, r, map[string]string{
 		"id": "1",
-	}
-
-	handlers.UpdateMessage(ctx, w, r, vars)
+	})
 
 	resp := w.Result()
 
@@ -215,25 +219,27 @@ func TestUpdateMessage_OwnerUpdatesMessage(t *testing.T) {
 
 	// check response
 	message := assertMessageJSON(t, resp)
-	assertMessage(t, message, ctx.CurrentUser.Username, "modified topic", "modified body", "1")
+	if message != nil {
+		assertMessage(t, message, ctx.CurrentUser.Username, "modified topic", "modified body", "1")
 
-	// Check repository
-	storedMessage := ctx.MessageRepository.FindByID("1")
-	assertMessage(t, storedMessage, ctx.CurrentUser.Username, "modified topic", "modified body", "1")
+		// Check repository
+		storedMessage := ctx.MessageRepository.FindByID("1")
+		if storedMessage != nil {
+			assertMessage(t, storedMessage, ctx.CurrentUser.Username, "modified topic", "modified body", "1")
+		} else {
+			t.Error("Message not found in repository")
+		}
+	}
 }
 
 func TestUpdateMessage_NonexistantMessage(t *testing.T) {
 	ctx := setupContext()
 
-	body := strings.NewReader("{\"id\":\"666\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}")
+	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"666\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}"))
 
-	r := httptest.NewRequest("PUT", "/api/messages/666", body)
-	w := httptest.NewRecorder()
-	vars := map[string]string{
+	handlers.UpdateMessage(ctx, w, r, map[string]string{
 		"id": "666",
-	}
-
-	handlers.UpdateMessage(ctx, w, r, vars)
+	})
 
 	resp := w.Result()
 
@@ -244,15 +250,11 @@ func TestUpdateMessage_NonexistantMessage(t *testing.T) {
 func TestUpdateMessage_OtherUserUpdatesMessage(t *testing.T) {
 	ctx := setupContext()
 
-	body := strings.NewReader("{\"id\":\"2\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}")
+	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"2\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}"))
 
-	r := httptest.NewRequest("PUT", "/api/messages/2", body)
-	w := httptest.NewRecorder()
-	vars := map[string]string{
+	handlers.UpdateMessage(ctx, w, r, map[string]string{
 		"id": "2",
-	}
-
-	handlers.UpdateMessage(ctx, w, r, vars)
+	})
 
 	resp := w.Result()
 
@@ -261,19 +263,21 @@ func TestUpdateMessage_OtherUserUpdatesMessage(t *testing.T) {
 
 	// Verify that it isnt modified!
 	storedMessage := ctx.MessageRepository.FindByID("2")
-	assertMessage(t, storedMessage, "bar", "Topic2", "Body2", "2")
+	if storedMessage != nil {
+		assertMessage(t, storedMessage, "bar", "Topic2", "Body2", "2")
+	} else {
+		t.Error("Message not found in repository")
+	}
 }
 
 func TestDeleteMessage_OwnerDeletesMessage(t *testing.T) {
 	ctx := setupContext()
 
-	r := httptest.NewRequest("DELETE", "/api/messages/1", nil)
-	w := httptest.NewRecorder()
-	vars := map[string]string{
-		"id": "1",
-	}
+	r, w := setupRequest()
 
-	handlers.DeleteMessage(ctx, w, r, vars)
+	handlers.DeleteMessage(ctx, w, r, map[string]string{
+		"id": "1",
+	})
 
 	resp := w.Result()
 
@@ -289,13 +293,11 @@ func TestDeleteMessage_OwnerDeletesMessage(t *testing.T) {
 func TestDeleteMessage_NonexistantMessage(t *testing.T) {
 	ctx := setupContext()
 
-	r := httptest.NewRequest("DELETE", "/api/messages/666", nil)
-	w := httptest.NewRecorder()
-	vars := map[string]string{
-		"id": "666",
-	}
+	r, w := setupRequest()
 
-	handlers.DeleteMessage(ctx, w, r, vars)
+	handlers.DeleteMessage(ctx, w, r, map[string]string{
+		"id": "666",
+	})
 
 	resp := w.Result()
 
@@ -306,13 +308,11 @@ func TestDeleteMessage_NonexistantMessage(t *testing.T) {
 func TestDeleteMessage_OtherUserDeletesMessage(t *testing.T) {
 	ctx := setupContext()
 
-	r := httptest.NewRequest("DELETE", "/api/messages/2", nil)
-	w := httptest.NewRecorder()
-	vars := map[string]string{
-		"id": "2",
-	}
+	r, w := setupRequest()
 
-	handlers.DeleteMessage(ctx, w, r, vars)
+	handlers.DeleteMessage(ctx, w, r, map[string]string{
+		"id": "2",
+	})
 
 	resp := w.Result()
 
