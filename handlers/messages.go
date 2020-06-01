@@ -33,11 +33,16 @@ func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request,
 	if err := json.NewDecoder(r.Body).Decode(&message); err == nil {
 		message.Author = ctx.CurrentUser.Username
 
-		id := ctx.MessageRepository.Insert(message)
+		if errors := message.Validate(); len(errors) == 0 {
+			id := ctx.MessageRepository.Insert(message)
 
-		storedMessage := ctx.MessageRepository.FindByID(id)
+			storedMessage := ctx.MessageRepository.FindByID(id)
 
-		json.NewEncoder(w).Encode(storedMessage)
+			json.NewEncoder(w).Encode(storedMessage)
+		} else {
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			json.NewEncoder(w).Encode(errors)
+		}
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
 	}
@@ -53,10 +58,15 @@ func UpdateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request,
 				message.ID = id
 				message.Author = ctx.CurrentUser.Username
 
-				ctx.MessageRepository.Update(message)
+				if errors := message.Validate(); len(errors) == 0 {
+					ctx.MessageRepository.Update(message)
 
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(message)
+					w.Header().Set("Content-Type", "application/json")
+					json.NewEncoder(w).Encode(message)
+				} else {
+					w.WriteHeader(http.StatusUnprocessableEntity)
+					json.NewEncoder(w).Encode(errors)
+				}
 			} else {
 				w.WriteHeader(http.StatusBadRequest)
 			}

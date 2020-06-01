@@ -92,6 +92,22 @@ func assertMessage(t *testing.T, message *models.Message, expectedAuthor, expect
 	assertEqual(t, message.ID, expectedID, "Id is correct")
 }
 
+func includesString(haystack []string, needle string) bool {
+	for _, e := range haystack {
+		if e == needle {
+			return true
+		}
+	}
+
+	return false
+}
+
+func assertArrayContains(t *testing.T, haystack []string, needle, message string) {
+	if !includesString(haystack, needle) {
+		t.Errorf("Assertion '%s' not met", message)
+	}
+}
+
 var noVars = map[string]string{}
 
 func TestGetMessages(t *testing.T) {
@@ -162,7 +178,7 @@ func TestGetMessage_WhenMessageDoesNotExists(t *testing.T) {
 	assertStatusCode(t, resp, 404)
 }
 
-func TestCreateMessage_WithValidJson(t *testing.T) {
+func TestCreateMessage_WithCorrectData(t *testing.T) {
 	ctx := setupContext()
 
 	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"42\",\"author\":\"phony\", \"topic\":\"topic\", \"body\":\"body\"}"))
@@ -186,6 +202,29 @@ func TestCreateMessage_WithValidJson(t *testing.T) {
 		} else {
 			t.Error("Message not found in repository")
 		}
+	}
+}
+
+func TestCreateMessage_WithMissingData(t *testing.T) {
+	ctx := setupContext()
+
+	r, w := setupRequestWithContent(strings.NewReader("{}"))
+
+	handlers.CreateMessage(ctx, w, r, noVars)
+
+	resp := w.Result()
+
+	assertStatusCode(t, resp, 422)
+
+	// content
+
+	var errors []string
+
+	if err := json.NewDecoder(resp.Body).Decode(&errors); err != nil {
+		t.Errorf("Error decoding json-response: %v", err)
+	} else {
+		assertArrayContains(t, errors, "Topic is mandatory", "Errors contains 'Topic is mandatory'")
+		assertArrayContains(t, errors, "Body is mandatory", "Errors contains 'Body is mandatory'")
 	}
 }
 
@@ -246,6 +285,31 @@ func TestUpdateMessage_NonexistantMessage(t *testing.T) {
 	assertEmptyBody(t, resp)
 }
 
+func TestUpdateMessage_WithMissingData(t *testing.T) {
+	ctx := setupContext()
+
+	r, w := setupRequestWithContent(strings.NewReader("{}"))
+
+	handlers.UpdateMessage(ctx, w, r, map[string]string{
+		"id": "1",
+	})
+
+	resp := w.Result()
+
+	assertStatusCode(t, resp, 422)
+
+	// content
+
+	var errors []string
+
+	if err := json.NewDecoder(resp.Body).Decode(&errors); err != nil {
+		t.Errorf("Error decoding json-response: %v", err)
+	} else {
+		assertArrayContains(t, errors, "Topic is mandatory", "Errors contains 'Topic is mandatory'")
+		assertArrayContains(t, errors, "Body is mandatory", "Errors contains 'Body is mandatory'")
+	}
+}
+
 func TestUpdateMessage_OtherUserUpdatesMessage(t *testing.T) {
 	ctx := setupContext()
 
@@ -283,7 +347,6 @@ func TestUpdateMessage_WithInvalidJson(t *testing.T) {
 	assertStatusCode(t, resp, 400)
 	assertEmptyBody(t, resp)
 }
-
 
 func TestDeleteMessage_OwnerDeletesMessage(t *testing.T) {
 	ctx := setupContext()
