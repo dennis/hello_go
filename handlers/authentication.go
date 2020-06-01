@@ -30,10 +30,6 @@ func Authenticate(ctx *context.Context, r *http.Request) *models.User {
 		return nil
 	}
 
-	if len(username_password[1]) > 0 {
-		return nil
-	}
-
 	username := string(username_password[0])
 
 	return ctx.UserRepository.FindByToken(username)
