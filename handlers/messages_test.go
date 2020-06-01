@@ -269,6 +269,22 @@ func TestUpdateMessage_OtherUserUpdatesMessage(t *testing.T) {
 	}
 }
 
+func TestUpdateMessage_WithInvalidJson(t *testing.T) {
+	ctx := setupContext()
+
+	r, w := setupRequestWithContent(strings.NewReader(""))
+
+	handlers.UpdateMessage(ctx, w, r, map[string]string{
+		"id": "1",
+	})
+
+	resp := w.Result()
+
+	assertStatusCode(t, resp, 400)
+	assertEmptyBody(t, resp)
+}
+
+
 func TestDeleteMessage_OwnerDeletesMessage(t *testing.T) {
 	ctx := setupContext()
 

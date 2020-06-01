@@ -49,15 +49,17 @@ func UpdateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request,
 	if message := ctx.MessageRepository.FindByID(id); message != nil {
 		if message.Author == ctx.CurrentUser.Username {
 			var message models.Message
-			_ = json.NewDecoder(r.Body).Decode(&message)
+			if err := json.NewDecoder(r.Body).Decode(&message); err == nil {
+				message.ID = id
+				message.Author = ctx.CurrentUser.Username
 
-			message.ID = id
-			message.Author = ctx.CurrentUser.Username
+				ctx.MessageRepository.Update(message)
 
-			ctx.MessageRepository.Update(message)
-
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(message)
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(message)
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+			}
 		} else {
 			w.WriteHeader(http.StatusUnauthorized)
 		}
