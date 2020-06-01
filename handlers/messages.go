@@ -33,9 +33,11 @@ func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request,
 	if err := json.NewDecoder(r.Body).Decode(&message); err == nil {
 		message.Author = ctx.CurrentUser.Username
 
-		ctx.MessageRepository.Insert(message)
+		id := ctx.MessageRepository.Insert(message)
 
-		json.NewEncoder(w).Encode(message)
+		storedMessage := ctx.MessageRepository.FindByID(id)
+
+		json.NewEncoder(w).Encode(storedMessage)
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
 	}
@@ -46,11 +48,10 @@ func UpdateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request,
 
 	if message := ctx.MessageRepository.FindByID(id); message != nil {
 		if message.Author == ctx.CurrentUser.Username {
-			ctx.MessageRepository.DeleteByID(id)
-
 			var message models.Message
 			_ = json.NewDecoder(r.Body).Decode(&message)
 
+			message.ID = id
 			message.Author = ctx.CurrentUser.Username
 
 			ctx.MessageRepository.Update(message)

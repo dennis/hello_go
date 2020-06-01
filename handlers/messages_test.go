@@ -176,14 +176,13 @@ func TestCreateMessage_WithValidJson(t *testing.T) {
 
 	// check response
 	message := assertMessageJSON(t, resp)
-
 	if message != nil {
-		assertMessage(t, message, ctx.CurrentUser.Username, "topic", "body", "42")
+		assertMessage(t, message, ctx.CurrentUser.Username, "topic", "body", message.ID)
 
 		// Check repository
-		storedMessage := ctx.MessageRepository.FindByID("42")
+		storedMessage := ctx.MessageRepository.FindByID(message.ID)
 		if storedMessage != nil {
-			assertMessage(t, storedMessage, ctx.CurrentUser.Username, "topic", "body", "42")
+			assertMessage(t, storedMessage, ctx.CurrentUser.Username, "topic", "body", message.ID)
 		} else {
 			t.Error("Message not found in repository")
 		}
