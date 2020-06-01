@@ -12,6 +12,21 @@ import (
 	"github.com/dennis/hello_go/models"
 )
 
+// A wrapper for ResponseWriter, that also captures the StatusCode. Used for logging
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func newLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
+	return &loggingResponseWriter{w, http.StatusOK}
+}
+
+func (l *loggingResponseWriter) WriteHeader(code int) {
+	l.statusCode = code
+	l.ResponseWriter.WriteHeader(code)
+}
+
 type App struct {
 	Router  *mux.Router
 	Context context.Context
@@ -46,27 +61,19 @@ func (a *App) Run() {
 	log.Fatal(http.ListenAndServe(":8080", a.Router))
 }
 
-type loggingResponseWriter struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func newLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
-	return &loggingResponseWriter{w, http.StatusOK}
-}
-
-func (l *loggingResponseWriter) WriteHeader(code int) {
-	l.statusCode = code
-	l.ResponseWriter.WriteHeader(code)
-}
-
+// This dispatches a request to a Handler as configured in setupRoutes.
+// It performs a number of tasks:
+// 1) It logs the request, its duration and statuscode
+// 2) It performs Authentication and only allows authenticated requests to
+//    reach our handlers
+// 3) It provides Context, ResponseWriter, Request and our URL vars to the handler
 func (a *App) handleRequest(handler func(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string)) http.HandlerFunc {
 	return func(original_w http.ResponseWriter, r *http.Request) {
-		// We need to wrap our ResponseWriter to capture the http status code
 		w := newLoggingResponseWriter(original_w)
 
 		// To avoid that mux leaks into the handlers, we capture any
 		// variables it as, and provide them as a plain map[string]string
+		// /api/message/{id} in the route will result in a vars[id] = <value>
 		vars := mux.Vars(r)
 
 		start := time.Now()
