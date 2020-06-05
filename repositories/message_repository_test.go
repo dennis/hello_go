@@ -2,12 +2,11 @@ package repositories
 
 import (
 	"testing"
-	"github.com/dennis/hello_go/repositories"
 	"github.com/dennis/hello_go/models"
 )
 
 func TestInsertingMessagesAssignsIDToThem(t *testing.T) {
-	repo := repositories.MessageRepository{}
+	repo := MessageRepository{}
 	m1 := models.Message {}
 	m2 := models.Message {}
 	
@@ -19,7 +18,7 @@ func TestInsertingMessagesAssignsIDToThem(t *testing.T) {
 }
 
 func TestGetAllReturnsNothingIfNothingIsAdded(t *testing.T) {
-	repo := repositories.MessageRepository{}
+	repo := MessageRepository{}
 
 	if r := repo.GetAll(); len(r) > 0 {
 		t.Errorf("Expected GetAll() not to return any messages, but got %v", r)
@@ -27,7 +26,7 @@ func TestGetAllReturnsNothingIfNothingIsAdded(t *testing.T) {
 }
 
 func TestGetAllReturnsAddedMessages(t *testing.T) {
-	repo := repositories.MessageRepository{}
+	repo := MessageRepository{}
 	m := models.Message {}
 	repo.Insert(m)
 
@@ -37,7 +36,7 @@ func TestGetAllReturnsAddedMessages(t *testing.T) {
 }
 
 func TestModifyingAMessage(t *testing.T) {
-	repo := repositories.MessageRepository{}
+	repo := MessageRepository{}
 
 	m := models.Message { Body: "original" }
 	id := repo.Insert(m)
@@ -53,7 +52,7 @@ func TestModifyingAMessage(t *testing.T) {
 }
 
 func TestRemovingAMessage(t *testing.T) {
-	repo := repositories.MessageRepository{}
+	repo := MessageRepository{}
 
 	m := models.Message {}
 	id := repo.Insert(m)

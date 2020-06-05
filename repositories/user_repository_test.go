@@ -3,12 +3,11 @@ package repositories
 import (
 	"testing"
 
-	"github.com/dennis/hello_go/repositories"
 	"github.com/dennis/hello_go/models"
 )
 
 func TestFindingAUserThroughToken(t *testing.T) {
-	repo := repositories.UserRepository {}
+	repo := UserRepository {}
 
 	u := models.User { Username: "username", AuthToken: "token" }
 
@@ -20,7 +19,7 @@ func TestFindingAUserThroughToken(t *testing.T) {
 }
 
 func TestAnInvalidToken(t *testing.T) {
-	repo := repositories.UserRepository {}
+	repo := UserRepository {}
 
 	if f := repo.FindByToken("token"); f != nil {
 		t.Errorf("Expected to find no user, but got: %v", f)

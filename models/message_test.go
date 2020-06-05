@@ -2,12 +2,10 @@ package models
 
 import (
 	"testing"
-
-	"github.com/dennis/hello_go/models"
 )
 
 func TestValidMessage(t *testing.T) {
-	m := models.Message{
+	m := Message{
 		ID: "ID",
 		Topic: "Topic",
 		Body: "Body",
@@ -20,7 +18,7 @@ func TestValidMessage(t *testing.T) {
 }
 
 func TestMissingTopic(t *testing.T) {
-	m := models.Message{
+	m := Message{
 		ID: "ID",
 		Topic: "",
 		Body: "Body",
@@ -35,7 +33,7 @@ func TestMissingTopic(t *testing.T) {
 }
 
 func TestMissingBody(t *testing.T) {
-	m := models.Message{
+	m := Message{
 		ID: "ID",
 		Topic: "Topic",
 		Body: "",
@@ -50,7 +48,7 @@ func TestMissingBody(t *testing.T) {
 }
 
 func TestValidMessageWithMissingAuthor(t *testing.T) {
-	m := models.Message{
+	m := Message{
 		ID: "ID",
 		Topic: "Topic",
 		Body: "Body",
@@ -63,7 +61,7 @@ func TestValidMessageWithMissingAuthor(t *testing.T) {
 }
 
 func TestValidMessageWithMissingID(t *testing.T) {
-	m := models.Message{
+	m := Message{
 		ID: "",
 		Topic: "Topic",
 		Body: "Body",
