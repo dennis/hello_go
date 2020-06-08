@@ -6,17 +6,33 @@ import (
 
 	"github.com/dennis/hello_go/context"
 	"github.com/dennis/hello_go/models"
+	"github.com/dennis/hello_go/services"
 )
+
+func handleError(w http.ResponseWriter, err error) {
+	if _, ok := err.(*services.NotFoundError); ok {
+		w.WriteHeader(http.StatusNotFound)
+	} else if serviceErr, ok := err.(*services.NotValidError); ok {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(w).Encode(serviceErr.Errors)
+	} else if _, ok := err.(*services.NotOwnerError); ok {
+		w.WriteHeader(http.StatusUnauthorized)
+	} else {
+		// Catch all
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
 
 // Returns a JSON array with all the available Messages
 // returns:
 //   200 success: if successful
 func GetMessages(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
-	w.Header().Set("Content-Type", "application/json")
-
-	messages := ctx.MessageRepository.GetAll()
-
-	json.NewEncoder(w).Encode(messages)
+	if messages, err := ctx.MessageService.GetMessages(); err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(messages)
+	} else {
+		handleError(w, err)
+	}
 }
 
 // Returns a specific message as json
@@ -24,11 +40,11 @@ func GetMessages(ctx *context.Context, w http.ResponseWriter, r *http.Request, v
 //   200 success: if successful
 //   404 bad request: if message was not found
 func GetMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
-	if message := ctx.MessageRepository.FindByID(vars["id"]); message != nil {
+	if message, err := ctx.MessageService.GetMessage(vars["id"]); err == nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(message)
 	} else {
-		w.WriteHeader(http.StatusNotFound)
+		handleError(w, err)
 	}
 }
 
@@ -39,29 +55,22 @@ func GetMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, va
 //   400 bad request: in case of errors (reading the json)
 //   422 unprocessable entity: if provided JSON isn't valid
 func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
-	w.Header().Set("Content-Type", "application/json")
-
 	var message models.Message
 
 	if err := json.NewDecoder(r.Body).Decode(&message); err == nil {
-		message.Author = ctx.CurrentUser.Username
-
-		if errors := message.Validate(); len(errors) == 0 {
-			id := ctx.MessageRepository.Insert(message)
-
-			storedMessage := ctx.MessageRepository.FindByID(id)
+		if storedMessage, serviceError := ctx.MessageService.CreateMessage(message, ctx.CurrentUser); serviceError == nil {
+			w.Header().Set("Content-Type", "application/json")
 
 			json.NewEncoder(w).Encode(storedMessage)
 		} else {
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			json.NewEncoder(w).Encode(errors)
+			handleError(w, serviceError)
 		}
 	} else {
-		w.WriteHeader(http.StatusBadRequest)
+		handleError(w, err)
 	}
 }
 
-// Updates the Message. 
+// Updates the Message.
 // returns:
 //   200 success: if message was successful updated
 //   400 bad request: in case of errors (reading the json)
@@ -71,50 +80,29 @@ func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request,
 func UpdateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
 	id := vars["id"]
 
-	if message := ctx.MessageRepository.FindByID(id); message != nil {
-		if message.Author == ctx.CurrentUser.Username {
-			var message models.Message
-			if err := json.NewDecoder(r.Body).Decode(&message); err == nil {
-				message.ID = id
-				message.Author = ctx.CurrentUser.Username
+	var message models.Message
 
-				if errors := message.Validate(); len(errors) == 0 {
-					ctx.MessageRepository.Update(message)
+	if err := json.NewDecoder(r.Body).Decode(&message); err == nil {
+		message.ID = id
 
-					w.Header().Set("Content-Type", "application/json")
-					json.NewEncoder(w).Encode(message)
-				} else {
-					w.WriteHeader(http.StatusUnprocessableEntity)
-					json.NewEncoder(w).Encode(errors)
-				}
-			} else {
-				w.WriteHeader(http.StatusBadRequest)
-			}
+		if storedMessage, serviceError := ctx.MessageService.UpdateMessage(message, ctx.CurrentUser); serviceError == nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(storedMessage)
 		} else {
-			w.WriteHeader(http.StatusUnauthorized)
+			handleError(w, serviceError)
 		}
-
-		return
 	} else {
-		w.WriteHeader(http.StatusNotFound)
+		handleError(w, err)
 	}
 }
 
-// Deletes a Message. 
+// Deletes a Message.
 // returns:
 //   200 success: if message was successful updated
 //   401 unauthorized: if CurrentUser isn't the owner of the message
 //   404 not found: if message wasn't found
 func DeleteMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
-	id := vars["id"]
-
-	if message := ctx.MessageRepository.FindByID(id); message != nil {
-		if message.Author == ctx.CurrentUser.Username {
-			ctx.MessageRepository.DeleteByID(id)
-		} else {
-			w.WriteHeader(http.StatusUnauthorized)
-		}
-	} else {
-		w.WriteHeader(http.StatusNotFound)
+	if err := ctx.MessageService.DeleteMessage(vars["id"], ctx.CurrentUser); err != nil {
+		handleError(w, err)
 	}
 }

@@ -8,15 +8,25 @@ import (
 
 	"github.com/dennis/hello_go/context"
 	"github.com/dennis/hello_go/models"
+	"github.com/dennis/hello_go/repositories"
+	"github.com/dennis/hello_go/services"
 )
 
 var dennis models.User = models.User{Username: "foo", AuthToken: "authtokendennis"}
 var marianne models.User = models.User{Username: "bar", AuthToken: "authtokenmarianne"}
 
 func setup(authHeader string) (*context.Context, *http.Request) {
-	ctx := &context.Context{}
-	ctx.UserRepository.Insert(dennis)
-	ctx.UserRepository.Insert(marianne)
+	userRepository := repositories.UserRepository{}
+
+	userRepository.Insert(dennis)
+	userRepository.Insert(marianne)
+
+	messageRepository := repositories.MessageRepository{}
+
+	ctx := &context.Context{
+		AuthenticationService: services.AuthenticationService{UserRepository: &userRepository},
+		MessageService:        services.MessageService{MessageRepository: &messageRepository},
+	}
 
 	r := httptest.NewRequest("GET", "/this/doesnt/matter", nil)
 

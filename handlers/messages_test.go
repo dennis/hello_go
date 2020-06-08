@@ -11,6 +11,8 @@ import (
 
 	"github.com/dennis/hello_go/context"
 	"github.com/dennis/hello_go/models"
+	"github.com/dennis/hello_go/repositories"
+	"github.com/dennis/hello_go/services"
 )
 
 var message1 models.Message = models.Message{ID: "1", Author: "foo", Topic: "Topic1", Body: "Body1"}
@@ -19,14 +21,16 @@ var fooUser models.User = models.User{Username: "foo"}
 var barUser models.User = models.User{Username: "bar"}
 
 func setupContext() *context.Context {
-	ctx := context.Context{}
+	userRepository := repositories.UserRepository{}
+	messageRepository := repositories.MessageRepository{}
+	messageRepository.Insert(message1)
+	messageRepository.Insert(message2)
 
-	ctx.CurrentUser = fooUser
-
-	ctx.MessageRepository.Insert(message1)
-	ctx.MessageRepository.Insert(message2)
-
-	return &ctx
+	return &context.Context{
+		CurrentUser:           fooUser,
+		AuthenticationService: services.AuthenticationService{UserRepository: &userRepository},
+		MessageService:        services.MessageService{MessageRepository: &messageRepository},
+	}
 }
 
 func setupRequestWithContent(content io.Reader) (*http.Request, *httptest.ResponseRecorder) {
@@ -195,8 +199,8 @@ func TestCreateMessage_WithCorrectData(t *testing.T) {
 		assertMessage(t, message, ctx.CurrentUser.Username, "topic", "body", message.ID)
 
 		// Check repository
-		storedMessage := ctx.MessageRepository.FindByID(message.ID)
-		if storedMessage != nil {
+		storedMessage, err := ctx.MessageService.GetMessage(message.ID)
+		if storedMessage != nil && err == nil {
 			assertMessage(t, storedMessage, ctx.CurrentUser.Username, "topic", "body", message.ID)
 		} else {
 			t.Error("Message not found in repository")
@@ -260,8 +264,8 @@ func TestUpdateMessage_OwnerUpdatesMessage(t *testing.T) {
 		assertMessage(t, message, ctx.CurrentUser.Username, "modified topic", "modified body", "1")
 
 		// Check repository
-		storedMessage := ctx.MessageRepository.FindByID("1")
-		if storedMessage != nil {
+		storedMessage, err := ctx.MessageService.GetMessage("1")
+		if storedMessage != nil && err == nil {
 			assertMessage(t, storedMessage, ctx.CurrentUser.Username, "modified topic", "modified body", "1")
 		} else {
 			t.Error("Message not found in repository")
@@ -324,8 +328,8 @@ func TestUpdateMessage_OtherUserUpdatesMessage(t *testing.T) {
 	assertEmptyBody(t, resp)
 
 	// Verify that it isnt modified!
-	storedMessage := ctx.MessageRepository.FindByID("2")
-	if storedMessage != nil {
+	storedMessage, err := ctx.MessageService.GetMessage("2")
+	if storedMessage != nil && err == nil {
 		assertMessage(t, storedMessage, "bar", "Topic2", "Body2", "2")
 	} else {
 		t.Error("Message not found in repository")
@@ -362,7 +366,7 @@ func TestDeleteMessage_OwnerDeletesMessage(t *testing.T) {
 	assertEmptyBody(t, resp)
 
 	// Check if it was removed from repository
-	if ctx.MessageRepository.FindByID("1") != nil {
+	if msg, _ := ctx.MessageService.GetMessage("1"); msg != nil {
 		t.Errorf("Deleted Message still exists in Repository!")
 	}
 }
@@ -397,7 +401,7 @@ func TestDeleteMessage_OtherUserDeletesMessage(t *testing.T) {
 	assertEmptyBody(t, resp)
 
 	// Check if it was removed from repository
-	if ctx.MessageRepository.FindByID("1") == nil {
+	if msg, err := ctx.MessageService.GetMessage("1"); msg == nil && err == nil {
 		t.Errorf("Message was unexpectedly removed from Repository!")
 	}
 }

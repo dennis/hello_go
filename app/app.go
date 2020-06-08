@@ -10,6 +10,8 @@ import (
 	"github.com/dennis/hello_go/context"
 	"github.com/dennis/hello_go/handlers"
 	"github.com/dennis/hello_go/models"
+	"github.com/dennis/hello_go/repositories"
+	"github.com/dennis/hello_go/services"
 )
 
 // A wrapper for ResponseWriter, that also captures the StatusCode. Used for logging
@@ -48,13 +50,19 @@ func (a *App) setupRoutes() {
 }
 
 func (a *App) populateData() {
-	a.Context = context.Context{}
+	messageRepository := repositories.MessageRepository{}
+	userRepository := repositories.UserRepository{}
 
-	a.Context.MessageRepository.Insert(models.Message{ID: "1", Author: "Dennis", Topic: "Hello World", Body: "Lorem lipsum"})
-	a.Context.MessageRepository.Insert(models.Message{ID: "2", Author: "Marianne", Topic: "re: Hello World", Body: "Really?"})
+	messageRepository.Insert(models.Message{ID: "1", Author: "Dennis", Topic: "Hello World", Body: "Lorem lipsum"})
+	messageRepository.Insert(models.Message{ID: "2", Author: "Marianne", Topic: "re: Hello World", Body: "Really?"})
 
-	a.Context.UserRepository.Insert(models.User{Username: "Dennis", AuthToken: "authtokendennis"})
-	a.Context.UserRepository.Insert(models.User{Username: "Marianne", AuthToken: "authtokenmarianne"})
+	userRepository.Insert(models.User{Username: "Dennis", AuthToken: "authtokendennis"})
+	userRepository.Insert(models.User{Username: "Marianne", AuthToken: "authtokenmarianne"})
+
+	a.Context = context.Context{
+		AuthenticationService: services.AuthenticationService{UserRepository: &userRepository},
+		MessageService:        services.MessageService{MessageRepository: &messageRepository},
+	}
 }
 
 func (a *App) Run() {
