@@ -20,17 +20,16 @@ var message2 models.Message = models.Message{ID: "2", Author: "bar", Topic: "Top
 var fooUser models.User = models.User{Username: "foo"}
 var barUser models.User = models.User{Username: "bar"}
 
-func setupContext() *context.Context {
+func setupContext() (*context.Context, *context.Session) {
 	userRepository := repositories.UserRepository{}
 	messageRepository := repositories.MessageRepository{}
 	messageRepository.Insert(message1)
 	messageRepository.Insert(message2)
 
 	return &context.Context{
-		CurrentUser:           fooUser,
 		AuthenticationService: services.AuthenticationService{UserRepository: &userRepository},
 		MessageService:        services.MessageService{MessageRepository: &messageRepository},
-	}
+	}, &context.Session { CurrentUser: fooUser }
 }
 
 func setupRequestWithContent(content io.Reader) (*http.Request, *httptest.ResponseRecorder) {
@@ -114,11 +113,11 @@ func assertArrayContains(t *testing.T, haystack []string, needle, message string
 var noVars = map[string]string{}
 
 func TestGetMessages(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequest()
 
-	GetMessages(ctx, w, r, noVars)
+	GetMessages(ctx, session, w, r, noVars)
 
 	resp := w.Result()
 
@@ -147,11 +146,11 @@ func TestGetMessages(t *testing.T) {
 }
 
 func TestGetMessage_WhenMessageExists(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequest()
 
-	GetMessage(ctx, w, r, map[string]string{
+	GetMessage(ctx, session, w, r, map[string]string{
 		"id": "1",
 	})
 
@@ -168,11 +167,11 @@ func TestGetMessage_WhenMessageExists(t *testing.T) {
 }
 
 func TestGetMessage_WhenMessageDoesNotExists(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequest()
 
-	GetMessage(ctx, w, r, map[string]string{
+	GetMessage(ctx, session, w, r, map[string]string{
 		"id": "28",
 	})
 
@@ -182,11 +181,11 @@ func TestGetMessage_WhenMessageDoesNotExists(t *testing.T) {
 }
 
 func TestCreateMessage_WithCorrectData(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"42\",\"author\":\"phony\", \"topic\":\"topic\", \"body\":\"body\"}"))
 
-	CreateMessage(ctx, w, r, noVars)
+	CreateMessage(ctx, session, w, r, noVars)
 
 	resp := w.Result()
 
@@ -196,12 +195,12 @@ func TestCreateMessage_WithCorrectData(t *testing.T) {
 	// check response
 	message := assertMessageJSON(t, resp)
 	if message != nil {
-		assertMessage(t, message, ctx.CurrentUser.Username, "topic", "body", message.ID)
+		assertMessage(t, message, session.CurrentUser.Username, "topic", "body", message.ID)
 
 		// Check repository
 		storedMessage, err := ctx.MessageService.GetMessage(message.ID)
 		if storedMessage != nil && err == nil {
-			assertMessage(t, storedMessage, ctx.CurrentUser.Username, "topic", "body", message.ID)
+			assertMessage(t, storedMessage, session.CurrentUser.Username, "topic", "body", message.ID)
 		} else {
 			t.Error("Message not found in repository")
 		}
@@ -209,11 +208,11 @@ func TestCreateMessage_WithCorrectData(t *testing.T) {
 }
 
 func TestCreateMessage_WithMissingData(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequestWithContent(strings.NewReader("{}"))
 
-	CreateMessage(ctx, w, r, noVars)
+	CreateMessage(ctx, session, w, r, noVars)
 
 	resp := w.Result()
 
@@ -232,11 +231,11 @@ func TestCreateMessage_WithMissingData(t *testing.T) {
 }
 
 func TestCreateMessage_WithInvalidJson(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequestWithContent(strings.NewReader(""))
 
-	CreateMessage(ctx, w, r, noVars)
+	CreateMessage(ctx, session, w, r, noVars)
 
 	resp := w.Result()
 
@@ -245,11 +244,11 @@ func TestCreateMessage_WithInvalidJson(t *testing.T) {
 }
 
 func TestUpdateMessage_OwnerUpdatesMessage(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"1\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}"))
 
-	UpdateMessage(ctx, w, r, map[string]string{
+	UpdateMessage(ctx, session, w, r, map[string]string{
 		"id": "1",
 	})
 
@@ -261,12 +260,12 @@ func TestUpdateMessage_OwnerUpdatesMessage(t *testing.T) {
 	// check response
 	message := assertMessageJSON(t, resp)
 	if message != nil {
-		assertMessage(t, message, ctx.CurrentUser.Username, "modified topic", "modified body", "1")
+		assertMessage(t, message, session.CurrentUser.Username, "modified topic", "modified body", "1")
 
 		// Check repository
 		storedMessage, err := ctx.MessageService.GetMessage("1")
 		if storedMessage != nil && err == nil {
-			assertMessage(t, storedMessage, ctx.CurrentUser.Username, "modified topic", "modified body", "1")
+			assertMessage(t, storedMessage, session.CurrentUser.Username, "modified topic", "modified body", "1")
 		} else {
 			t.Error("Message not found in repository")
 		}
@@ -274,11 +273,11 @@ func TestUpdateMessage_OwnerUpdatesMessage(t *testing.T) {
 }
 
 func TestUpdateMessage_NonexistantMessage(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"666\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}"))
 
-	UpdateMessage(ctx, w, r, map[string]string{
+	UpdateMessage(ctx, session, w, r, map[string]string{
 		"id": "666",
 	})
 
@@ -289,11 +288,11 @@ func TestUpdateMessage_NonexistantMessage(t *testing.T) {
 }
 
 func TestUpdateMessage_WithMissingData(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequestWithContent(strings.NewReader("{}"))
 
-	UpdateMessage(ctx, w, r, map[string]string{
+	UpdateMessage(ctx, session, w, r, map[string]string{
 		"id": "1",
 	})
 
@@ -314,11 +313,11 @@ func TestUpdateMessage_WithMissingData(t *testing.T) {
 }
 
 func TestUpdateMessage_OtherUserUpdatesMessage(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"2\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}"))
 
-	UpdateMessage(ctx, w, r, map[string]string{
+	UpdateMessage(ctx, session, w, r, map[string]string{
 		"id": "2",
 	})
 
@@ -337,11 +336,11 @@ func TestUpdateMessage_OtherUserUpdatesMessage(t *testing.T) {
 }
 
 func TestUpdateMessage_WithInvalidJson(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequestWithContent(strings.NewReader(""))
 
-	UpdateMessage(ctx, w, r, map[string]string{
+	UpdateMessage(ctx, session, w, r, map[string]string{
 		"id": "1",
 	})
 
@@ -352,11 +351,11 @@ func TestUpdateMessage_WithInvalidJson(t *testing.T) {
 }
 
 func TestDeleteMessage_OwnerDeletesMessage(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequest()
 
-	DeleteMessage(ctx, w, r, map[string]string{
+	DeleteMessage(ctx, session, w, r, map[string]string{
 		"id": "1",
 	})
 
@@ -372,11 +371,11 @@ func TestDeleteMessage_OwnerDeletesMessage(t *testing.T) {
 }
 
 func TestDeleteMessage_NonexistantMessage(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequest()
 
-	DeleteMessage(ctx, w, r, map[string]string{
+	DeleteMessage(ctx, session, w, r, map[string]string{
 		"id": "666",
 	})
 
@@ -387,11 +386,11 @@ func TestDeleteMessage_NonexistantMessage(t *testing.T) {
 }
 
 func TestDeleteMessage_OtherUserDeletesMessage(t *testing.T) {
-	ctx := setupContext()
+	ctx, session := setupContext()
 
 	r, w := setupRequest()
 
-	DeleteMessage(ctx, w, r, map[string]string{
+	DeleteMessage(ctx, session, w, r, map[string]string{
 		"id": "2",
 	})
 

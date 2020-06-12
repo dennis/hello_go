@@ -75,7 +75,7 @@ func (a *App) Run() {
 // 2) It performs Authentication and only allows authenticated requests to
 //    reach our handlers
 // 3) It provides Context, ResponseWriter, Request and our URL vars to the handler
-func (a *App) handleRequest(handler func(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string)) http.HandlerFunc {
+func (a *App) handleRequest(handler func(ctx *context.Context, session *context.Session, w http.ResponseWriter, r *http.Request, vars map[string]string)) http.HandlerFunc {
 	return func(original_w http.ResponseWriter, r *http.Request) {
 		w := newLoggingResponseWriter(original_w)
 
@@ -85,11 +85,14 @@ func (a *App) handleRequest(handler func(ctx *context.Context, w http.ResponseWr
 		vars := mux.Vars(r)
 
 		start := time.Now()
+		username := "unknown"
 
 		if user := handlers.Authenticate(&a.Context, r); user != nil {
-			a.Context.CurrentUser = *user
+			session := context.Session{ CurrentUser: *user }
 
-			handler(&a.Context, w, r, vars)
+			username = user.Username
+
+			handler(&a.Context, &session, w, r, vars)
 		} else {
 			w.WriteHeader(http.StatusUnauthorized)
 		}
@@ -97,7 +100,7 @@ func (a *App) handleRequest(handler func(ctx *context.Context, w http.ResponseWr
 		log.Printf(
 			"%3d %-10s%-6s\t%s\t%s",
 			w.statusCode,
-			a.Context.CurrentUser.Username,
+			username,
 			r.Method,
 			r.RequestURI,
 			time.Since(start))
