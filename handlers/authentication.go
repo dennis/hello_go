@@ -32,5 +32,5 @@ func Authenticate(ctx *context.Context, r *http.Request) *models.User {
 
 	username := string(username_password[0])
 
-	return ctx.UserRepository.FindByToken(username)
+	return ctx.AuthenticationService.Authenticate(username)
 }
