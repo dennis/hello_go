@@ -30,56 +30,63 @@ func (s *MessageService) GetMessages() ([]models.Message, error) {
 }
 
 func (s *MessageService) GetMessage(id string) (*models.Message, error) {
-	if message := s.MessageRepository.FindByID(id); message != nil {
-		return message, nil
-	} else {
+	message := s.MessageRepository.FindByID(id)
+
+	if  message == nil {
 		return nil, &NotFoundError{}
 	}
+
+	return message, nil
 }
 
 func (s *MessageService) CreateMessage(message models.Message, user models.User) (*models.Message, error) {
+	errors := message.Validate()
+
+	if  len(errors) > 0 {
+		return nil, &NotValidError{Errors: errors}
+	}
+
+	message.Author = user.Username
+
+	id := s.MessageRepository.Insert(message)
+
+	return s.MessageRepository.FindByID(id), nil
+}
+
+func (s *MessageService) UpdateMessage(message models.Message, user models.User) (*models.Message, error) {
+	storedMessage := s.MessageRepository.FindByID(message.ID)
+
+	if storedMessage == nil {
+		return nil, &NotFoundError{}
+	}
+
+	if storedMessage.Author != user.Username {
+		return nil, &NotOwnerError{}
+	}
+
+	message.Author = user.Username
+
 	if errors := message.Validate(); len(errors) == 0 {
-		message.Author = user.Username
+		s.MessageRepository.Update(message)
 
-		id := s.MessageRepository.Insert(message)
-
-		return s.MessageRepository.FindByID(id), nil
+		return s.MessageRepository.FindByID(message.ID), nil
 	} else {
 		return nil, &NotValidError{Errors: errors}
 	}
 }
 
-func (s *MessageService) UpdateMessage(message models.Message, user models.User) (*models.Message, error) {
-	if storedMessage := s.MessageRepository.FindByID(message.ID); storedMessage != nil {
-		if storedMessage.Author == user.Username {
-			message.Author = user.Username
-
-			if errors := message.Validate(); len(errors) == 0 {
-				s.MessageRepository.Update(message)
-
-				return s.MessageRepository.FindByID(message.ID), nil
-			} else {
-				return nil, &NotValidError{Errors: errors}
-			}
-		} else {
-			return nil, &NotOwnerError{}
-		}
-	} else {
-		return nil, &NotFoundError{}
-	}
-}
-
 func (s *MessageService) DeleteMessage(id string, user models.User) error {
-	if message := s.MessageRepository.FindByID(id); message != nil {
-		if message.Author == user.Username {
-			s.MessageRepository.DeleteByID(id)
+	message := s.MessageRepository.FindByID(id)
 
-			return nil
-		} else {
-			return &NotOwnerError{}
-		}
-
-	} else {
+	if message == nil {
 		return &NotFoundError{}
 	}
+
+	if message.Author != user.Username {
+		return &NotOwnerError{}
+	}
+
+	s.MessageRepository.DeleteByID(id)
+
+	return nil
 }

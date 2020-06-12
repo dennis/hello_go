@@ -27,12 +27,15 @@ func handleError(w http.ResponseWriter, err error) {
 // returns:
 //   200 success: if successful
 func GetMessages(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
-	if messages, err := ctx.MessageService.GetMessages(); err == nil {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(messages)
-	} else {
+	messages, err := ctx.MessageService.GetMessages()
+
+	if err != nil {
 		handleError(w, err)
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(messages)
 }
 
 // Returns a specific message as json
@@ -40,12 +43,15 @@ func GetMessages(ctx *context.Context, w http.ResponseWriter, r *http.Request, v
 //   200 success: if successful
 //   404 bad request: if message was not found
 func GetMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
-	if message, err := ctx.MessageService.GetMessage(vars["id"]); err == nil {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(message)
-	} else {
+	message, err := ctx.MessageService.GetMessage(vars["id"])
+
+	if err != nil {
 		handleError(w, err)
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(message)
 }
 
 // Creates a new Message. Will force Author to be CurrentUser. ID is assigned by
@@ -57,17 +63,21 @@ func GetMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, va
 func CreateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
 	var message models.Message
 
-	if err := json.NewDecoder(r.Body).Decode(&message); err == nil {
-		if storedMessage, serviceError := ctx.MessageService.CreateMessage(message, ctx.CurrentUser); serviceError == nil {
-			w.Header().Set("Content-Type", "application/json")
-
-			json.NewEncoder(w).Encode(storedMessage)
-		} else {
-			handleError(w, serviceError)
-		}
-	} else {
+	if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
 		handleError(w, err)
+		return
 	}
+
+	storedMessage, serviceError := ctx.MessageService.CreateMessage(message, ctx.CurrentUser)
+
+	if serviceError != nil {
+		handleError(w, serviceError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	json.NewEncoder(w).Encode(storedMessage)
 }
 
 // Updates the Message.
@@ -82,18 +92,24 @@ func UpdateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request,
 
 	var message models.Message
 
-	if err := json.NewDecoder(r.Body).Decode(&message); err == nil {
-		message.ID = id
+	err := json.NewDecoder(r.Body).Decode(&message)
 
-		if storedMessage, serviceError := ctx.MessageService.UpdateMessage(message, ctx.CurrentUser); serviceError == nil {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(storedMessage)
-		} else {
-			handleError(w, serviceError)
-		}
-	} else {
+	if err != nil {
 		handleError(w, err)
+		return
 	}
+
+	message.ID = id
+
+	storedMessage, serviceError := ctx.MessageService.UpdateMessage(message, ctx.CurrentUser)
+	
+	if serviceError != nil {
+		handleError(w, serviceError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(storedMessage)
 }
 
 // Deletes a Message.
@@ -102,7 +118,10 @@ func UpdateMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request,
 //   401 unauthorized: if CurrentUser isn't the owner of the message
 //   404 not found: if message wasn't found
 func DeleteMessage(ctx *context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) {
-	if err := ctx.MessageService.DeleteMessage(vars["id"], ctx.CurrentUser); err != nil {
+	err := ctx.MessageService.DeleteMessage(vars["id"], ctx.CurrentUser)
+	
+	if err != nil {
 		handleError(w, err)
+		return
 	}
 }
