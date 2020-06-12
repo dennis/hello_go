@@ -31,7 +31,7 @@ func TestGetAllReturnsAddedMessages(t *testing.T) {
 	repo.Insert(m)
 
 	if r := repo.GetAll(); len(r) != 1 {
-		t.Errorf("Expected GetAll() not to one message, but got %v", r)
+		t.Errorf("Expected GetAll() to return one message, but got %v", r)
 	}
 }
 
