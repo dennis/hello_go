@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/dennis/hello_go/context"
-	"github.com/dennis/hello_go/handlers"
 	"github.com/dennis/hello_go/models"
 )
 
@@ -33,7 +32,7 @@ func base64Encode(raw string) string {
 }
 
 func TestAutenticate_ValidAuthentication(t *testing.T) {
-	user := handlers.Authenticate(setup("Basic " + base64Encode("authtokendennis:")))
+	user := Authenticate(setup("Basic " + base64Encode("authtokendennis:")))
 
 	if user == nil || *user != dennis {
 		t.Errorf("Authentication expected to be successful for 'dennis'. Got %v", user)
@@ -41,7 +40,7 @@ func TestAutenticate_ValidAuthentication(t *testing.T) {
 }
 
 func TestAutenticate_InvalidScheme(t *testing.T) {
-	user := handlers.Authenticate(setup("rot13 " + base64Encode("authtokendennis:")))
+	user := Authenticate(setup("rot13 " + base64Encode("authtokendennis:")))
 
 	if user != nil {
 		t.Errorf("Authentication expected to fail, but got %v", user)
@@ -49,7 +48,7 @@ func TestAutenticate_InvalidScheme(t *testing.T) {
 }
 
 func TestAutenticate_BadEncoding(t *testing.T) {
-	user := handlers.Authenticate(setup("Basic " + base64Encode("authtokendennis:") + "NOPE"))
+	user := Authenticate(setup("Basic " + base64Encode("authtokendennis:") + "NOPE"))
 
 	if user != nil {
 		t.Errorf("Authentication expected to fail, but got %v", user)
@@ -57,7 +56,7 @@ func TestAutenticate_BadEncoding(t *testing.T) {
 }
 
 func TestAutenticate_InvalidString(t *testing.T) {
-	user := handlers.Authenticate(setup("Basic " + base64Encode("this-is-not-valid")))
+	user := Authenticate(setup("Basic " + base64Encode("this-is-not-valid")))
 
 	if user != nil {
 		t.Errorf("Authentication expected to fail, but got %v", user)
@@ -65,7 +64,7 @@ func TestAutenticate_InvalidString(t *testing.T) {
 }
 
 func TestAutenticate_IncorrectToken(t *testing.T) {
-	user := handlers.Authenticate(setup("Basic " + base64Encode("badtoken:")))
+	user := Authenticate(setup("Basic " + base64Encode("badtoken:")))
 
 	if user != nil {
 		t.Errorf("Authentication expected to fail, but got %v", user)

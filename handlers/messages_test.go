@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/dennis/hello_go/context"
-	"github.com/dennis/hello_go/handlers"
 	"github.com/dennis/hello_go/models"
 )
 
@@ -115,7 +114,7 @@ func TestGetMessages(t *testing.T) {
 
 	r, w := setupRequest()
 
-	handlers.GetMessages(ctx, w, r, noVars)
+	GetMessages(ctx, w, r, noVars)
 
 	resp := w.Result()
 
@@ -148,7 +147,7 @@ func TestGetMessage_WhenMessageExists(t *testing.T) {
 
 	r, w := setupRequest()
 
-	handlers.GetMessage(ctx, w, r, map[string]string{
+	GetMessage(ctx, w, r, map[string]string{
 		"id": "1",
 	})
 
@@ -169,7 +168,7 @@ func TestGetMessage_WhenMessageDoesNotExists(t *testing.T) {
 
 	r, w := setupRequest()
 
-	handlers.GetMessage(ctx, w, r, map[string]string{
+	GetMessage(ctx, w, r, map[string]string{
 		"id": "28",
 	})
 
@@ -183,7 +182,7 @@ func TestCreateMessage_WithCorrectData(t *testing.T) {
 
 	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"42\",\"author\":\"phony\", \"topic\":\"topic\", \"body\":\"body\"}"))
 
-	handlers.CreateMessage(ctx, w, r, noVars)
+	CreateMessage(ctx, w, r, noVars)
 
 	resp := w.Result()
 
@@ -210,7 +209,7 @@ func TestCreateMessage_WithMissingData(t *testing.T) {
 
 	r, w := setupRequestWithContent(strings.NewReader("{}"))
 
-	handlers.CreateMessage(ctx, w, r, noVars)
+	CreateMessage(ctx, w, r, noVars)
 
 	resp := w.Result()
 
@@ -233,7 +232,7 @@ func TestCreateMessage_WithInvalidJson(t *testing.T) {
 
 	r, w := setupRequestWithContent(strings.NewReader(""))
 
-	handlers.CreateMessage(ctx, w, r, noVars)
+	CreateMessage(ctx, w, r, noVars)
 
 	resp := w.Result()
 
@@ -246,7 +245,7 @@ func TestUpdateMessage_OwnerUpdatesMessage(t *testing.T) {
 
 	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"1\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}"))
 
-	handlers.UpdateMessage(ctx, w, r, map[string]string{
+	UpdateMessage(ctx, w, r, map[string]string{
 		"id": "1",
 	})
 
@@ -275,7 +274,7 @@ func TestUpdateMessage_NonexistantMessage(t *testing.T) {
 
 	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"666\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}"))
 
-	handlers.UpdateMessage(ctx, w, r, map[string]string{
+	UpdateMessage(ctx, w, r, map[string]string{
 		"id": "666",
 	})
 
@@ -290,7 +289,7 @@ func TestUpdateMessage_WithMissingData(t *testing.T) {
 
 	r, w := setupRequestWithContent(strings.NewReader("{}"))
 
-	handlers.UpdateMessage(ctx, w, r, map[string]string{
+	UpdateMessage(ctx, w, r, map[string]string{
 		"id": "1",
 	})
 
@@ -315,7 +314,7 @@ func TestUpdateMessage_OtherUserUpdatesMessage(t *testing.T) {
 
 	r, w := setupRequestWithContent(strings.NewReader("{\"id\":\"2\",\"author\":\"phony\", \"topic\":\"modified topic\", \"body\":\"modified body\"}"))
 
-	handlers.UpdateMessage(ctx, w, r, map[string]string{
+	UpdateMessage(ctx, w, r, map[string]string{
 		"id": "2",
 	})
 
@@ -338,7 +337,7 @@ func TestUpdateMessage_WithInvalidJson(t *testing.T) {
 
 	r, w := setupRequestWithContent(strings.NewReader(""))
 
-	handlers.UpdateMessage(ctx, w, r, map[string]string{
+	UpdateMessage(ctx, w, r, map[string]string{
 		"id": "1",
 	})
 
@@ -353,7 +352,7 @@ func TestDeleteMessage_OwnerDeletesMessage(t *testing.T) {
 
 	r, w := setupRequest()
 
-	handlers.DeleteMessage(ctx, w, r, map[string]string{
+	DeleteMessage(ctx, w, r, map[string]string{
 		"id": "1",
 	})
 
@@ -373,7 +372,7 @@ func TestDeleteMessage_NonexistantMessage(t *testing.T) {
 
 	r, w := setupRequest()
 
-	handlers.DeleteMessage(ctx, w, r, map[string]string{
+	DeleteMessage(ctx, w, r, map[string]string{
 		"id": "666",
 	})
 
@@ -388,7 +387,7 @@ func TestDeleteMessage_OtherUserDeletesMessage(t *testing.T) {
 
 	r, w := setupRequest()
 
-	handlers.DeleteMessage(ctx, w, r, map[string]string{
+	DeleteMessage(ctx, w, r, map[string]string{
 		"id": "2",
 	})
 
