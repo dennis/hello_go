@@ -102,7 +102,7 @@ func UpdateMessage(ctx *context.Context, session *context.Session, w http.Respon
 	message.ID = id
 
 	storedMessage, serviceError := ctx.MessageService.UpdateMessage(message, session.CurrentUser)
-	
+
 	if serviceError != nil {
 		handleError(w, serviceError)
 		return
@@ -119,7 +119,7 @@ func UpdateMessage(ctx *context.Context, session *context.Session, w http.Respon
 //   404 not found: if message wasn't found
 func DeleteMessage(ctx *context.Context, session *context.Session, w http.ResponseWriter, r *http.Request, vars map[string]string) {
 	err := ctx.MessageService.DeleteMessage(vars["id"], session.CurrentUser)
-	
+
 	if err != nil {
 		handleError(w, err)
 		return

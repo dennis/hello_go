@@ -32,7 +32,7 @@ func (s *MessageService) GetMessages() ([]models.Message, error) {
 func (s *MessageService) GetMessage(id string) (*models.Message, error) {
 	message := s.MessageRepository.FindByID(id)
 
-	if  message == nil {
+	if message == nil {
 		return nil, &NotFoundError{}
 	}
 
@@ -42,7 +42,7 @@ func (s *MessageService) GetMessage(id string) (*models.Message, error) {
 func (s *MessageService) CreateMessage(message models.Message, user models.User) (*models.Message, error) {
 	errors := message.Validate()
 
-	if  len(errors) > 0 {
+	if len(errors) > 0 {
 		return nil, &NotValidError{Errors: errors}
 	}
 

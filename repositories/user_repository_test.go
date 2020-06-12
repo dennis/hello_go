@@ -7,9 +7,9 @@ import (
 )
 
 func TestFindingAUserThroughToken(t *testing.T) {
-	repo := UserRepository {}
+	repo := UserRepository{}
 
-	u := models.User { Username: "username", AuthToken: "token" }
+	u := models.User{Username: "username", AuthToken: "token"}
 
 	repo.Insert(u)
 
@@ -19,7 +19,7 @@ func TestFindingAUserThroughToken(t *testing.T) {
 }
 
 func TestAnInvalidToken(t *testing.T) {
-	repo := UserRepository {}
+	repo := UserRepository{}
 
 	if f := repo.FindByToken("token"); f != nil {
 		t.Errorf("Expected to find no user, but got: %v", f)

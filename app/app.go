@@ -88,7 +88,7 @@ func (a *App) handleRequest(handler func(ctx *context.Context, session *context.
 		username := "unknown"
 
 		if user := handlers.Authenticate(&a.Context, r); user != nil {
-			session := context.Session{ CurrentUser: *user }
+			session := context.Session{CurrentUser: *user}
 
 			username = user.Username
 

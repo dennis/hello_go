@@ -29,7 +29,7 @@ func setupContext() (*context.Context, *context.Session) {
 	return &context.Context{
 		AuthenticationService: services.AuthenticationService{UserRepository: &userRepository},
 		MessageService:        services.MessageService{MessageRepository: &messageRepository},
-	}, &context.Session { CurrentUser: fooUser }
+	}, &context.Session{CurrentUser: fooUser}
 }
 
 func setupRequestWithContent(content io.Reader) (*http.Request, *httptest.ResponseRecorder) {

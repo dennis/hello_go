@@ -1,15 +1,15 @@
 package repositories
 
 import (
-	"testing"
 	"github.com/dennis/hello_go/models"
+	"testing"
 )
 
 func TestInsertingMessagesAssignsIDToThem(t *testing.T) {
 	repo := MessageRepository{}
-	m1 := models.Message {}
-	m2 := models.Message {}
-	
+	m1 := models.Message{}
+	m2 := models.Message{}
+
 	if n := repo.Insert(m1); n != "1" {
 		t.Errorf("Message `m1` got unexpected ID: %v", n)
 	} else if n := repo.Insert(m2); n != "2" {
@@ -27,7 +27,7 @@ func TestGetAllReturnsNothingIfNothingIsAdded(t *testing.T) {
 
 func TestGetAllReturnsAddedMessages(t *testing.T) {
 	repo := MessageRepository{}
-	m := models.Message {}
+	m := models.Message{}
 	repo.Insert(m)
 
 	if r := repo.GetAll(); len(r) != 1 {
@@ -38,10 +38,10 @@ func TestGetAllReturnsAddedMessages(t *testing.T) {
 func TestModifyingAMessage(t *testing.T) {
 	repo := MessageRepository{}
 
-	m := models.Message { Body: "original" }
+	m := models.Message{Body: "original"}
 	id := repo.Insert(m)
 
-	u := models.Message { ID: id, Body: "updated" }
+	u := models.Message{ID: id, Body: "updated"}
 	repo.Update(u)
 
 	n := repo.FindByID(id)
@@ -54,7 +54,7 @@ func TestModifyingAMessage(t *testing.T) {
 func TestRemovingAMessage(t *testing.T) {
 	repo := MessageRepository{}
 
-	m := models.Message {}
+	m := models.Message{}
 	id := repo.Insert(m)
 
 	repo.DeleteByID(id)
