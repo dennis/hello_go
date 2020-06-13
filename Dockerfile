@@ -9,6 +9,7 @@ FROM alpine
 RUN adduser -S -D -H -h /app appuser
 USER appuser
 COPY --from=builder /main /app/
+COPY messages.json users.json /app/
 WORKDIR /app
 EXPOSE 8080
 CMD ["./main"]

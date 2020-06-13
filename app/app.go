@@ -9,7 +9,6 @@ import (
 
 	"github.com/dennis/hello_go/context"
 	"github.com/dennis/hello_go/handlers"
-	"github.com/dennis/hello_go/models"
 	"github.com/dennis/hello_go/repositories"
 	"github.com/dennis/hello_go/services"
 )
@@ -53,11 +52,8 @@ func (a *App) populateData() {
 	messageRepository := repositories.MessageRepository{}
 	userRepository := repositories.UserRepository{}
 
-	messageRepository.Insert(models.Message{ID: "1", Author: "Dennis", Topic: "Hello World", Body: "Lorem lipsum"})
-	messageRepository.Insert(models.Message{ID: "2", Author: "Marianne", Topic: "re: Hello World", Body: "Really?"})
-
-	userRepository.Insert(models.User{Username: "Dennis", AuthToken: "authtokendennis"})
-	userRepository.Insert(models.User{Username: "Marianne", AuthToken: "authtokenmarianne"})
+	PopulateMessages(&messageRepository)
+	PopulateUsers(&userRepository)
 
 	a.Context = context.Context{
 		AuthenticationService: services.AuthenticationService{UserRepository: &userRepository},
